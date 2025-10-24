@@ -1,0 +1,92 @@
+% Script to compute all triples of admissible vertices in the case that p=3
+% We compute the corresponding PSL(2,3) elements as products of generators
+% then use this to generate the new triple of vertices
+sigma1=[0 1; -1 0];
+sigma2= [0 -1; 1 -1];
+sigma3= [1 1; 0 1];
+generators={sigma1,sigma2,sigma3};
+
+r=sqrt((sqrt(3)*tan(pi/3)-1)/(sqrt(3)*tan(pi/3)+1));
+w=sqrt((2*sin(pi/3)-1)/(2*sin(pi/3)+1))*exp(1i*pi/3);
+
+initial_triple=[w,r,0];
+S1=@(triple) S1(triple(1),triple(2),triple(3));
+S2=@(triple) S2(triple(1),triple(2),triple(3));
+S3=@(triple) S3(triple(1),triple(2),triple(3));
+transform_func={S1,S2,S3};
+
+% Since PSL(2,3) has 12 elements
+target_count=12;
+
+id_matrix=eye(2);
+id_canonical=canonical_psl_matrix(id_matrix);
+id_key= canonical_key(id_canonical);
+    
+% Create a containers.map to store the matrices and triples
+pairs_data= containers.Map('KeyType','char','ValueType','any');
+pairs_data(id_key)={id_canonical,initial_triple};
+
+% Now we generate all the pairs
+
+while true
+    keys_current=keys(pairs_data);
+    n_current=length(keys_current);
+
+    % Breaks once we find everything
+
+    if n_current>=target_count
+        break;
+    end
+
+    new_element_found=false;
+% Loop over current elements
+    for k=1:n_current
+        current_key=keys_current{k};
+        current_pair=pairs_data(current_key);
+        current_matrix=current_pair{1};
+        current_triple = current_pair{2};
+% Now apply generators to matrices to try and find new elements
+      for l=1:3
+        gen_matrix=generators{l};
+        S_func=transform_func{l};
+
+        new_matrix=mod(gen_matrix*current_matrix,3);
+        new_key=canonical_key(new_matrix);
+
+        % Store element only if we haven't seen it already
+        if ~isKey(pairs_data,new_key)
+            canon_new_matrix=canonical_psl_matrix(new_matrix);
+            new_triple=S_func(current_triple);
+
+            pairs_data(new_key)={canon_new_matrix, new_triple};
+            new_found=true;
+
+            % Break if we've found all elements
+            if length(keys(pairs_data))>=target_count
+                break;
+           end
+        end
+      end
+      if length(keys(pairs_data))>=target_count
+                break;
+      end
+    end
+end
+
+    % Extract the triples
+
+    set_of_keys =keys(pairs_data);
+    n_elements=length(set_of_keys);
+    triples_matrix=complex(zeros(n_elements,3));
+
+    for k=1:n_elements
+        data=pairs_data(set_of_keys{k});
+        triples_matrix(k,:)=data{2};
+    end
+
+ figure;
+ hold on;
+ for k=1:12
+     x=triples_matrix(k,:);
+     drawsphericaltriangleq5(x(1),x(2),x(3))
+ end
